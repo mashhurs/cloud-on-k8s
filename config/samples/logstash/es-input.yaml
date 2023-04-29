@@ -1,0 +1,41 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch-sample
+spec:
+  version: 8.7.0
+  nodeSets:
+    - name: default
+      count: 2
+      config:
+        node.store.allow_mmap: false
+---
+apiVersion: logstash.k8s.elastic.co/v1alpha1
+kind: Logstash
+metadata:
+  name: logstash-sample
+spec:
+  config:
+    log.level: debug
+  count: 1
+  version: 8.7.0
+  elasticsearchRefs:
+    - clusterName: production
+      name: elasticsearch-sample
+  pipelines:
+    - pipeline.id: main
+      config.string: |
+        input {
+          elasticsearch {
+            cloud_auth => "elastic:<pwd>"
+            cloud_id => "cloud-test:<cloud_id>"
+            ssl => true
+            ssl_certificate_verification => false
+            query => '{ "query": {"match_all": {}} }'
+            schedule => "* * * * *"
+          }
+        } 
+        output { 
+          stdout {}
+        }
+---

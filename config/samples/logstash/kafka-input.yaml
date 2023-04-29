@@ -1,0 +1,28 @@
+apiVersion: logstash.k8s.elastic.co/v1alpha1
+kind: Logstash
+metadata:
+  name: logstash-sample
+spec:
+  count: 3
+  version: 8.6.1
+  config:
+    log.level: info
+    api.http.host: "0.0.0.0"
+    queue.type: memory
+  pipelines:
+    - pipeline.id: main
+      config.string: input { kafka { bootstrap_servers => "mashhurs-mbp:9092" topics => ["first_topic"] } } output { stdout { } }
+  services:
+    - name: kafka
+      service:
+        spec:
+          type: ClusterIP
+          ports:
+            - port: 9092
+              name: "kafkainput"
+              protocol: TCP
+              targetPort: 9092
+  podTemplate:
+    spec:
+      containers:
+        - name: logstash

@@ -1,0 +1,121 @@
+---
+apiVersion: logstash.k8s.elastic.co/v1alpha1
+kind: Logstash
+metadata:
+  name: logstash-sample
+spec:
+  count: 3
+  version: 8.6.1
+  config:
+    log.level: info
+    api.http.host: "0.0.0.0"
+    queue.type: memory
+  pipelines:
+    - pipeline.id: main
+      config.string:  
+      config.string: |
+        input {
+          kafka {
+            bootstrap_servers => "mashhurs-mbp:9092" topics => ["first_topic"]
+          }
+        }
+        filter {
+          elasticsearch {
+            cloud_auth => "elastic:<pwd>"
+            cloud_id => "cloud-test:<cloud_id>"
+            index => "logstash-test"
+            query => "_id:1"
+            fields => { "@timestamp" => "started" }
+          }
+          date {
+            match => ["[started]", "ISO8601"]
+            target => "[started]"
+          }
+        }
+        output {
+          stdout { }
+        }
+  services:
+    - name: kafka
+      service:
+        spec:
+          type: ClusterIP
+          ports:
+            - port: 9092
+              name: "kafkainput"
+              protocol: TCP
+              targetPort: 9092
+  podTemplate:
+    spec:
+      containers:
+        - name: logstash
+---
+##### Mutate
+#mutate {
+#  split => { "message" => " " }
+#  add_field => { "customField" => "I have added a custom field." }
+#}
+#mutate {
+#  rename => {"customField" => "custom_field"}
+#}
+
+#### Grok
+#grok {
+#  match => { "message" => "%{IP:client} %{WORD:method} %{URIPATHPARAM:request} %{NUMBER:bytes} %{NUMBER:duration}" }
+#}
+
+### Date
+#date {
+#  match => [ "message", "MMM dd yyyy HH:mm:ss" ]
+#}
+
+### Json
+#json {
+#  source => "message"
+#}
+
+### Ruby
+#ruby {
+#  code => "puts 'Hello World'"
+#}
+
+### KV
+#kv {
+#  field_split => " "
+#  value_split => ":"
+#}
+
+### Translate
+#translate {
+#  source => "[message]"
+#  target => "[http_status_description]"
+#  dictionary => {
+#    "100" => "Continue"
+#    "101" => "Switching Protocols"
+#    "200" => "OK"
+#    "500" => "Server Error"
+#  }
+#  fallback => "I'm a teapot"
+#}
+
+### Split
+#split {
+#  field => "message"
+#  target => "new_message"
+#  terminator => ":"
+#}
+
+### CSV
+#csv {
+#  convert => {
+#    "agen" => "integer"
+#    "is_single" => "boolean"
+#  }
+#}
+
+### GeoIP
+#geoip {
+#  source => "message"
+#  target => "geo_info"
+#}
+
